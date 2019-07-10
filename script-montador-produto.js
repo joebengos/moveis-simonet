@@ -380,7 +380,7 @@ function start() {
    
 
     // se a fleg de promoção exister chame valida cep
-    if ($('#falg-controll .achei-montador').length > 0) {
+    if ($('#flag-controll .achei-montador').length > 0) {
         var time ;
         $(document).on('keyup', '#txtCep', function(){
             var cep = $(this).val().replace(/\D/g,'');;

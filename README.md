@@ -4,7 +4,7 @@ Passo a passo instalação do script.
 ### Página de produto 
 1. Dentro do CMS, no template de produto, inclua a seguinte linha antes do fechamento do body `</body>`: 
 ```HTML
-    <div id="falg-controll" style="display:none;">
+    <div id="flag-controll" style="display:none;">
         <vtex.cmc:HightLight/>
         <vtex.cmc:discountHightLight/>
     </div>

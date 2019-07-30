@@ -15,8 +15,6 @@
 function start() {
     $('head').append('<link rel="stylesheet" href="/arquivos/achei-montador.css">')
     
-    $('body').append('<style>@media screen and (min-width: 992px){.av-col-md-2{width: 8.33333%; float: left;}.av-col-md-13{width: 54.16667%; float: left;}.av-col-md-9{width: 37.5%; float: left;}}</style>')
-    
     var SimonettiStores = [
         "Itamaraju",
         "Posto da Mata",
@@ -59,20 +57,42 @@ function start() {
     
     var AcheiMontadorStores = ["São Paulo", "Rio de Janeiro", "Salvador"];
 
+    function saveToLocalStorage(id, sku) {
+        var localBind = localStorage.getItem('bindsku')
+        var arry = []
+        if (localBind != null) {
+            arry = localBind.split('#');
+            arry.push(`{"id":"${id}", "sku":"${sku}"}`)
+        } else {
+            arry.push(`{"id":"${id}", "sku":"${sku}"}`)
+        }
+        arry = arry.join('#')
+        localStorage.setItem('bindsku', arry);
+    }
+
+    function removToLocalStorage(id, sku) {
+        var localBind = localStorage.getItem('bindsku')
+        var str = `{"id":"${id}", "sku":"${sku}"}`
+        localBind = localBind.replace(str,'');
+        localStorage.setItem('bindsku', localBind);
+    }
+
     function addToCart(id) {
         var item = [{
             id: id,
             quantity: 1,
             seller: 'acheimontador'
         }];
+        
         vtexjs.checkout.addToCart(item)
             .done(function (orderForm) {
-                //alert('Item adicionado!');
+                //alert('Item adicionado!')
                 console.log(orderForm);
             });
     }
 
     function removeToCart(sku) {
+
         vtexjs.checkout.getOrderForm()
             .then(function (orderForm) {              
                 return orderForm.items.map(function(item,i) {
@@ -83,8 +103,28 @@ function start() {
                             "quantity": 0,
                         }]
                         console.log(itemsToRemove)
-        
+
                         return vtexjs.checkout.removeItems(itemsToRemove);
+                    }
+                });
+                
+            })
+    }
+
+    function updateItem(sku, ctrl) {
+        vtexjs.checkout.getOrderForm()
+            .then(function (orderForm) {              
+                orderForm.items.map(function(item,i) {
+                    if (sku === item.id) {
+                        var itemIndex = i 
+                        var qtl =  ctrl === 'more' ? item.quantity = item.quantity + 1 : item.quantity = item.quantity - 1
+                        var itemsToUpdate = [{
+                            "index": itemIndex,
+                            "quantity": qtl
+                        }]
+                        console.log(itemsToUpdate)
+
+                        return vtexjs.checkout.updateItems(itemsToUpdate, null, false);
                     }
                 });
                 
@@ -93,10 +133,32 @@ function start() {
 
     $('body').on('change','input[name="addMounting"]',function(){
         var sku = $(this).val();
+        var refSku = $(this).parents('tr.product-item').attr('data-sku')
+        var ctrl = false
+        var itemIndex = null
+        $(this).parents('td.product-name').toggleClass('active')
+        
+        $.each(vtexjs.checkout.orderForm.items , function(i , item) {
+            if (item.id == sku && item.quantity >= 1) {
+                ctrl = true
+            }
+        })
+
         if (this.checked) {
-            addToCart(sku);
+            if (ctrl == true) {
+                updateItem(sku, 'more')
+            } else {
+                addToCart(sku,refSku);
+            }
+            saveToLocalStorage(sku,refSku);
         } else {
-            removeToCart(sku)
+            if (ctrl == true) {
+                updateItem(sku, 'less')
+            } else {
+                removeToCart(sku)   
+            }
+
+            removToLocalStorage(sku,refSku);
         }
     })
 
@@ -129,8 +191,6 @@ function start() {
     function priceMounting(bestPrice,items) {
 
         var priceProduct = (bestPrice/100);
-
-
 
         var ptbr = new Intl.NumberFormat(["pt-BR"], {
             style: "currency",
@@ -261,6 +321,7 @@ function start() {
     }
 
     function showboxMounting(partial,bestPrice,items) {
+        var target = '';
 
         if(partial == "MoveisSimonetti") {
 
@@ -283,20 +344,21 @@ function start() {
             var mounting = priceMounting(bestPrice,items);
             var installments = null;
 
-            var checkBoxField =  null;
+            var checkBoxField = null
+            // vtexjs.checkout.orderForm.items.map(function(item,i){
+            //     if (mounting.sku == item.id ) {
+            //         checkBoxField = '<input type="checkbox" value="' + mounting.sku + '" id="addMounting-'+ items.id +'" name="addMounting" checked="checked" >' 
+            //         return false
+            //     }
+            // })
             
-            items.map(function(item,i){
-                if (mounting.sku == item.id ) {
-                    checkBoxField = '<input type="checkbox" value="' + mounting.sku + '" id="addMounting" name="addMounting" checked="checked" >' 
-                }
-            })
-            
-            if (checkBoxField === null) {
-                checkBoxField = '<input type="checkbox" value="' + mounting.sku + '" id="addMounting" name="addMounting" >' 
-            }
+            // if (checkBoxField === null) {
+            //     checkBoxField = '<input type="checkbox" value="' + mounting.sku + '" id="addMounting-'+ items.id +'" name="addMounting" >' 
+            // }
 
+            checkBoxField = '<input type="checkbox" value="' + mounting.sku + '" id="addMounting-'+ items.id +'" name="addMounting" >' 
 
-            var boxMounting = '<div id="boxMounting_content">' +
+            var boxMounting = '<div id="boxMounting_content" class="boxMounting_content" data-bind-sku="'+ items.id +'">' +
                 '<div class="row"><span>Aproveite e contrate</span></div>' +
                 '<div class="row box">' +
                 '<div class="av-col-md-2"><div class="checkboxFive">' +
@@ -304,7 +366,7 @@ function start() {
                 checkBoxField +
                 //'<input type="checkbox" value="' + mounting.sku + '" id="addMounting" name="addMounting" checked="checked" >' +
                 
-                '<label for="addMounting"></label></div></div>' +
+                '<label for="addMounting-'+ items.id +'"></label></div></div>' +
                 '<div class="av-col-md-13">' +
                 '<span class="title">Montagem de M&oacute;veis</span>' +
                 //'<span class="priceMounting">At&eacute; <span class="installmentsTimes">' + installments + 'x</span> de <span class="priceInstallments">' + mounting.priceInstallments + '</span></span>' +
@@ -317,15 +379,25 @@ function start() {
                 '</div>' +
                 '</div>';
 
-
         }
-
-        $('#render-cartman').css({
-            'display': 'table'
-        })
         
-        $('#render-cartman').html(boxMounting)
+        target = 'tr[data-sku="'+ items.id +'"] .product-name'
+        $(target).append(boxMounting)
+
     };
+
+    function validateChek() {
+        var skuBinds = localStorage.getItem('bindsku').split('#')
+
+        $.each(skuBinds,function(i, item){
+            if (item != '') {
+                console.log(item)
+                var obj = JSON.parse(item)
+                var selector = `#addMounting-${obj.sku}`
+                $(selector).attr('checked','checked')
+            }
+        })
+    }
 
     function validacoesFinais(CityFromCEP, bestPrice,items) {
         // verifica se o usuário está em uma cidade com loja Simonetti
@@ -333,12 +405,14 @@ function start() {
 
             console.log("Montagem Grátis fornecida por Lojas Simonetti.");
             showboxMounting("MoveisSimonetti",bestPrice,items);
+            validateChek()
         }
         // verifica se o usuário está em uma cidade atendida pelo Achei Montador
         else if( $.inArray( CityFromCEP, AcheiMontadorStores ) !== -1 )  {
             // mostra o box de montagem
             console.log("Mostra box de Montagem Achei Montador");
             showboxMounting("AcheiMontador",bestPrice,items);
+            validateChek()
         } else {
             console.log("Cidade sem cobertura pela Simonetti ou Achei Montador")
             return false;
@@ -361,7 +435,7 @@ function start() {
                     if (enableBenefits(orderForm, item)) {
                         // SE PRODUTO FAZER PARTE DE DEP/CAT COM MONTAGEM FAZER AS ULTIMAS VALIDAÇÕES
                         //console.log(enableBenefits(orderForm,item))
-                        validacoesFinais(validateCep.currentCity,item.price,orderForm.items);
+                        validacoesFinais(validateCep.currentCity,item.price,item);
                     }  
                 })
             }
@@ -369,9 +443,10 @@ function start() {
     });
 
     addToCart();
+    
 }
 
 $(window).load(function(){
     start();
-    vtexjs.checkout.getOrderForm()
+    vtexjs.checkout.getOrderForm().done(validateChek())
 })

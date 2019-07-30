@@ -12,6 +12,10 @@
  */
 
 function start() {
+
+    $('<div class="wrap"></div>').insertAfter("#main > div.product-info > div > div.product-buy-info .product-buy");
+    $('#main > div.product-info > div > div.product-buy-info .wrap').append($('.product-shipping, .product-payments'))
+
     var SimonettiStores = [
         "Itamaraju",
         "Posto da Mata",
@@ -214,6 +218,26 @@ function start() {
         }
     }
 
+    function saveToLocalStorage(id, sku) {
+        var localBind = localStorage.getItem('bindsku')
+        var arry = []
+        if (localBind != null) {
+            arry = localBind.split('#');
+            arry.push(`{"id":"${id}", "sku":"${sku}"}`)
+        } else {
+            arry.push(`{"id":"${id}", "sku":"${sku}"}`)
+        }
+        arry = arry.join('#')
+        localStorage.setItem('bindsku', arry);
+    }
+
+    function removToLocalStorage(id, sku) {
+        var localBind = localStorage.getItem('bindsku')
+        var str = `{"id":"${id}", "sku":"${sku}"}`
+        localBind = localBind.replace(str,'');
+        localStorage.setItem('bindsku', localBind);
+    }
+
     function showboxMounting(partial) {
 
 
@@ -254,8 +278,10 @@ function start() {
             }
     
             var boxMounting = '<div id="boxMounting_content">' +
-                '<div class="row"><span>Aproveite e contrate</span></div>' +
+                //'<div class="row"><span>Aproveite e contrate</span></div>' +
                 '<div class="row box">' +
+                '<div class="box-label">Aproveite e Contrate</div>'+
+                '<div class="wrap-itens">'+
                 '<div class="av-col-md-2"><div class="checkboxFive">' +
                 '<input type="checkbox" value="' + mounting.sku + '" id="addMounting" name="addMounting">' +
                 '<label for="addMounting"></label></div></div>' +
@@ -268,6 +294,7 @@ function start() {
                 '<img class="logoAcheiMontador" src="https://moveissimonetti.vteximg.com.br/arquivos/logo-Achei-Montador.png" width="100" height="57" />' +
                 '</div>' +
                 '</div>' +
+                '</div>' +
                 '</div>';
     
     
@@ -278,9 +305,10 @@ function start() {
         if ( document.getElementById("boxMounting_content") === (false || null) ) {
     
             console.log(boxMounting);
-    
-            $(boxMounting).insertAfter("#main > div.product-info > div > div.product-buy-info");
-    
+            
+            //$(boxMounting).insertAfter("#main > div.product-info > div > div.product-buy-info .product-buy");
+            
+            $('.product-buy').append(boxMounting)
         }
     
         addToCartWithMounting();
@@ -288,7 +316,7 @@ function start() {
 
     function addToCartWithMounting () {
 
-        $(".buy-button").live("click", function (e) {
+        $('body').on("click",".buy-button", function (e) {
     
             console.log('addMounting checked');
             console.log($('[name="addMounting"]').is(':checked'));
@@ -323,6 +351,9 @@ function start() {
                         var item2 = {id: addMounting, quantity: qty, seller: 'acheimontador'};
                         item.push(item1);
                         item.push(item2);
+
+                        saveToLocalStorage(addMounting, sku)
+
                         return vtexjs.checkout.addToCart(item);
                     }).done(function (orderForm) {
                         //console.log(orderForm)
@@ -380,7 +411,7 @@ function start() {
    
 
     // se a fleg de promoção exister chame valida cep
-    if ($('#flag-controll .achei-montador').length > 0) {
+    if ($('#flag-controll .achei-montador, #flag-controll .11---achei-montador').length > 0) {
         var time ;
         $(document).on('keyup', '#txtCep', function(){
             var cep = $(this).val().replace(/\D/g,'');;
